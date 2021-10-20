@@ -3,7 +3,7 @@ use rand::distributions::Standard;
 use rand::prelude::Distribution;
 use std::cmp::Ordering;
 use std::convert::TryFrom;
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 use std::io;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -30,10 +30,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Welcome to the ROCK - PAPER - SCISSORS game");
     println!("Type 'Scissors(s)', 'Rock(r)' or 'Paper(p)' to select your option");
-    println!("Playing total of {} rounds", game.best_of() as u8);
+    println!("Playing best of {} rounds", game.best_of());
     println!();
 
-    for _ in 0..game.best_of() as u8 {
+    for _ in 0..game.best_of() {
         let mut human_choice = String::new();
         io::stdin().read_line(&mut human_choice)?;
         let human_choice = Choice::try_from(human_choice)? as Choice;
@@ -47,30 +47,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             computer_choice
         );
 
-        let (winner, round_row) = match game.round_winner(&human_choice, &computer_choice) {
-            Winner::Human => (
-                Winner::Human,
-                row![c -> format!("{}", game.round()), BgFdc -> human_choice, BrFdc -> computer_choice],
-            ),
-            Winner::Computer => (
-                Winner::Computer,
-                row![c -> format!("{}", game.round()), BrFdc -> human_choice, BgFdc -> computer_choice],
-            ),
-            Winner::Draw => (
-                Winner::Draw,
-                row![c -> format!("{}", game.round()), ByFdc -> human_choice, ByFdc -> computer_choice],
-            ),
+        let winner = game.round_winner(&human_choice, &computer_choice);
+        let round_row = match winner {
+            Winner::Human => {
+                row![c -> format!("{}", game.round()), BgFdc -> human_choice, BrFdc -> computer_choice]
+            }
+            Winner::Computer => {
+                row![c -> format!("{}", game.round()), BrFdc -> human_choice, BgFdc -> computer_choice]
+            }
+            Winner::Draw => {
+                row![c -> format!("{}", game.round()), ByFdc -> human_choice, ByFdc -> computer_choice]
+            }
         };
 
         game.add_point(&winner);
         table.add_row(round_row);
         game.increase_round();
+
+        if game.enough_points_to_end_game() {
+            break
+        }
     }
 
     println!();
     table.insert_row(0, row![c => "Round", "Player", "Computer"]);
     table.add_row(row![c => "Total", game.human_points(), game.computer_points()]);
-    table.add_row(row![H1c -> "Winner", H2c -> format!("{}", game.game_winner())]);
+    table.add_row(row![H1c -> "Winner", H2cb -> format!("{}", game.game_winner())]);
     table.printstd();
 
     Ok(())
@@ -97,29 +99,33 @@ impl Display for Winner {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-enum BestOf {
-    Three = 3,
-    Five = 5,
-    Seven = 7,
-}
+#[derive(Debug)]
+struct BestOf(u8);
 
-impl FromStr for BestOf {
-    type Err = &'static str;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "3" => Ok(Self::Three),
-            "5" => Ok(Self::Five),
-            "7" => Ok(Self::Seven),
-            _ => Err("Could not parse given value. You must choose between 3, 5 and 7"),
+impl BestOf {
+    fn new(number: u8) -> Result<Self, &'static str> {
+        if (number % 2 != 0) && (number > 2) {
+            Ok(Self(number))
+        } else {
+            Err("Number must be odd and greater than 2")
         }
     }
 }
 
 impl Default for BestOf {
     fn default() -> Self {
-        Self::Five
+        Self(5)
+    }
+}
+
+impl FromStr for BestOf {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.parse::<u8>() {
+            Ok(value) => BestOf::new(value),
+            Err(_) => Err("Could not parse number"),
+        }
     }
 }
 
@@ -138,7 +144,7 @@ impl Game {
             round: 1,
             best_of: match best_of {
                 Some(value) => value,
-                _ => BestOf::default(),
+                None => BestOf::default(),
             },
         }
     }
@@ -167,8 +173,8 @@ impl Game {
         self.computer_points
     }
 
-    fn best_of(&self) -> BestOf {
-        self.best_of
+    fn best_of(&self) -> u8 {
+        self.best_of.0
     }
 
     fn round_winner(&self, human_choice: &Choice, computer_choice: &Choice) -> Winner {
@@ -188,6 +194,14 @@ impl Game {
         } else {
             Winner::Draw
         }
+    }
+
+    fn enough_points_to_end_game(&self) -> bool {
+        let minimum_round = (self.best_of() / 2) + 1;
+        if (self.human_points == minimum_round) | (self.computer_points == minimum_round) {
+            return true
+        }
+        false
     }
 }
 
@@ -340,5 +354,26 @@ mod tests {
         game.add_point(&Winner::Human);
         game.add_point(&Winner::Human);
         assert_eq!(game.game_winner(), Winner::Draw)
+    }
+
+    #[test]
+    #[should_panic]
+    fn on_even_numbers() {
+        BestOf::new(6).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn on_number_less_than_3() {
+        BestOf::new(2).unwrap();
+    }
+
+    #[test]
+    fn should_stop_when_other_player_cant_win_anymore() {
+        let mut game = Game::new(Some(BestOf::default()));
+        game.add_point(&Winner::Computer);
+        game.add_point(&Winner::Computer);
+        game.add_point(&Winner::Computer);
+        debug_assert!(game.enough_points_to_end_game());
     }
 }
