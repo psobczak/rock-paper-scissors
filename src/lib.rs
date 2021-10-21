@@ -56,6 +56,7 @@ impl FromStr for BestOf {
     }
 }
 
+#[derive(Debug)]
 pub struct Game {
     human_points: u8,
     computer_points: u8,
