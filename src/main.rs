@@ -11,7 +11,7 @@ extern crate rock_paper_scissors as rps;
     about = "Simple rock-paper-scissors game with nice output formatting"
 )]
 struct Opt {
-    /// Number of rounds to be played. 3, 5 or 7 are available.
+    /// Number of rounds to be played. Number must be odd and greater than 2.
     #[structopt(short = "r", long = "rounds")]
     best_of: Option<rps::BestOf>,
 }
