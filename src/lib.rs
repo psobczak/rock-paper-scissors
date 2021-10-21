@@ -301,6 +301,16 @@ mod tests {
         game.add_point(&Winner::Computer);
         game.add_point(&Winner::Computer);
         game.add_point(&Winner::Computer);
-        debug_assert!(game.enough_points_to_end_game());
+        assert!(game.enough_points_to_end_game());
+    }
+
+    #[test]
+    fn false_when_not_enough_points_to_end_game_early() {
+        let mut game = Game::new(Some(BestOf::default()));
+        game.add_point(&Winner::Computer);
+        game.add_point(&Winner::Computer);
+        game.add_point(&Winner::Human);
+        game.add_point(&Winner::Human);
+        assert!(!game.enough_points_to_end_game());
     }
 }

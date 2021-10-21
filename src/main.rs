@@ -1,6 +1,5 @@
 use prettytable::{cell, row, Table};
 use std::convert::TryFrom;
-use std::fmt::Debug;
 use std::io;
 use structopt::StructOpt;
 
