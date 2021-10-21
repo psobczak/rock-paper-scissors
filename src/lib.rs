@@ -27,6 +27,35 @@ impl Display for Winner {
 }
 
 #[derive(Debug)]
+pub struct Round {
+    number: u8,
+    round_winner: Option<Winner>,
+}
+
+impl Round {
+    pub fn new() -> Self {
+        Self {
+            number: 1,
+            round_winner: None,
+        }
+    }
+
+    pub fn set_round_winner(&mut self, winner: Winner) {
+        self.round_winner = Some(winner);
+    }
+
+    pub fn increase(&mut self) {
+        self.number += 1
+    }
+}
+
+impl Display for Round {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.number)
+    }
+}
+
+#[derive(Debug)]
 pub struct BestOf(u8);
 
 impl BestOf {
@@ -60,7 +89,7 @@ impl FromStr for BestOf {
 pub struct Game {
     human_points: u8,
     computer_points: u8,
-    round: u8,
+    round: Round,
     best_of: BestOf,
 }
 
@@ -69,7 +98,7 @@ impl Game {
         Self {
             human_points: 0,
             computer_points: 0,
-            round: 1,
+            round: Round::new(),
             best_of: match best_of {
                 Some(value) => value,
                 None => BestOf::default(),
@@ -85,12 +114,8 @@ impl Game {
         }
     }
 
-    pub fn round(&self) -> u8 {
-        self.round
-    }
-
-    pub fn increase_round(&mut self) {
-        self.round += 1
+    pub fn round(&mut self) -> &mut Round {
+        &mut self.round
     }
 
     pub fn human_points(&self) -> u8 {
@@ -127,7 +152,7 @@ impl Game {
     pub fn enough_points_to_end_game(&self) -> bool {
         let minimum_round = (self.best_of() / 2) + 1;
         if (self.human_points == minimum_round) | (self.computer_points == minimum_round) {
-            return true
+            return true;
         }
         false
     }

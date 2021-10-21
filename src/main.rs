@@ -45,6 +45,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
 
         let winner = game.round_winner(&human_choice, &computer_choice);
+        
         let round_row = match winner {
             rps::Winner::Human => {
                 row![c -> format!("{}", game.round()), BgFdc -> human_choice, BrFdc -> computer_choice]
@@ -59,7 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         game.add_point(&winner);
         table.add_row(round_row);
-        game.increase_round();
+        game.round().increase();
 
         if game.enough_points_to_end_game() {
             break
